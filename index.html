@@ -59,7 +59,7 @@
         import { 
           Search, Plus, X, Flame, ChefHat, Info, ArrowRight, Trash2, 
           Sparkles, Calendar, Target, Leaf, Utensils, BookOpen, Clock, List, 
-          ChevronRight, ShoppingBag, Minus, CreditCard, MapPin, Truck, Package, CheckCircle, ExternalLink, Link
+          ChevronRight, ShoppingBag, Minus, CreditCard, MapPin, Truck, Package, CheckCircle, ExternalLink, Link, User
         } from 'lucide-react';
 
         // --- Data with Prices ---
@@ -175,6 +175,20 @@
           return true;
         };
 
+        const calculateBMR = (weight, height, age, gender) => {
+          // Mifflin-St Jeor Equation
+          let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+          if (gender === 'male') {
+            bmr += 5;
+          } else {
+            bmr -= 161;
+          }
+          return bmr;
+        };
+
+        // Standard Activity Multiplier (Sedentary/Lightly Active default 1.2)
+        const ACTIVITY_MULTIPLIER = 1.2;
+
         const Toast = ({ message, type, onClose }) => {
           useEffect(() => { const timer = setTimeout(onClose, 3000); return () => clearTimeout(timer); }, [onClose]);
           return (
@@ -227,11 +241,73 @@
           );
         };
 
+        const OnboardingModal = ({ onComplete }) => {
+          const [step, setStep] = useState(1);
+          const [data, setData] = useState({ weight: '', height: '', age: '', gender: 'male' });
+
+          const handleSubmit = (e) => {
+            e.preventDefault();
+            const bmr = calculateBMR(parseFloat(data.weight), parseFloat(data.height), parseFloat(data.age), data.gender);
+            const tdee = Math.round(bmr * ACTIVITY_MULTIPLIER);
+            onComplete({ ...data, tdee });
+          };
+
+          return (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+              <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full animate-scale-up">
+                <div className="text-center mb-8">
+                  <div className="inline-flex bg-green-100 p-4 rounded-full mb-4 text-green-600">
+                    <User size={32} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900">Welcome to CalorieWise</h2>
+                  <p className="text-gray-500 mt-2">Let's personalize your nutrition plan.</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Weight (kg)</label>
+                      <input required type="number" placeholder="e.g. 70" className="w-full p-3 bg-gray-50 rounded-xl border focus:ring-2 focus:ring-green-500 outline-none" 
+                        value={data.weight} onChange={e => setData({...data, weight: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Height (cm)</label>
+                      <input required type="number" placeholder="e.g. 175" className="w-full p-3 bg-gray-50 rounded-xl border focus:ring-2 focus:ring-green-500 outline-none" 
+                        value={data.height} onChange={e => setData({...data, height: e.target.value})} />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Age</label>
+                      <input required type="number" placeholder="e.g. 25" className="w-full p-3 bg-gray-50 rounded-xl border focus:ring-2 focus:ring-green-500 outline-none" 
+                        value={data.age} onChange={e => setData({...data, age: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Gender</label>
+                      <select className="w-full p-3 bg-gray-50 rounded-xl border focus:ring-2 focus:ring-green-500 outline-none" 
+                        value={data.gender} onChange={e => setData({...data, gender: e.target.value})}>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold shadow-lg transition-all mt-4">
+                    Calculate My Plan
+                  </button>
+                </form>
+              </div>
+            </div>
+          );
+        };
+
         // --- Main App ---
         function CalorieWise() {
-          const [activeTab, setActiveTab] = useState('calculator'); // calculator | planner | cart | checkout
+          const [userProfile, setUserProfile] = useState(null); // { weight, height, age, gender, tdee }
+          const [activeTab, setActiveTab] = useState('calculator'); 
           const [selectedItems, setSelectedItems] = useState([]);
-          const [cartItems, setCartItems] = useState([]); // { ...foodItem, qty }
+          const [cartItems, setCartItems] = useState([]);
           
           const [searchQuery, setSearchQuery] = useState('');
           const [suggestedDish, setSuggestedDish] = useState(null);
@@ -307,12 +383,19 @@
              const [plan, setPlan] = useState(null);
              const [viewingRecipe, setViewingRecipe] = useState(null);
 
+             // Calculate Goal Calories based on Profile
+             const baseTDEE = userProfile ? userProfile.tdee : 2000;
+             const goalCalories = goal === 'lose' ? baseTDEE - 500 : goal === 'gain' ? baseTDEE + 500 : baseTDEE;
+
              const generate = () => {
                const allowed = DISH_RULES.filter(dish => checkDietaryFit(dish.ingredients, diet));
                const rated = allowed.map(dish => {
                  const cals = dish.ingredients.reduce((sum, id) => sum + (FOOD_DATABASE.find(f => f.id === id)?.calories || 0), 0);
                  return { ...dish, totalCals: cals };
                });
+               
+               // Sort logic: Find meals that fit nicely into 3 daily meals (approx 30% of daily calories)
+               // Simple logic: maintain existing sort preference but display context
                const sortFn = goal === 'gain' ? (a, b) => b.totalCals - a.totalCals : (a, b) => a.totalCals - b.totalCals;
                
                setPlan({
@@ -321,6 +404,11 @@
                  dinner: rated.filter(d => d.category === 'Dinner').sort(sortFn).slice(0, 3),
                });
              };
+
+             // Auto-generate on first load if profile exists
+             useEffect(() => {
+                if (userProfile && !plan) generate();
+             }, [userProfile]);
 
              const MealCard = ({ dish, color }) => (
                 <div className="p-5 min-w-[280px] w-[280px] md:w-full rounded-xl border border-transparent shadow-sm hover:shadow-md transition-all bg-white relative overflow-hidden group shrink-0">
@@ -347,7 +435,14 @@
              return (
                <div className="space-y-8 animate-content-fade-in pb-12">
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                     <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><Target className="text-green-500" /> Plan Your Diet</h2>
+                     <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-xl font-bold flex items-center gap-2"><Target className="text-green-500" /> Your Personal Plan</h2>
+                        <div className="text-right">
+                           <p className="text-xs text-gray-500 uppercase font-bold">Daily Target</p>
+                           <p className="text-2xl font-bold text-green-600">{goalCalories} <span className="text-sm text-gray-400 font-medium">kcal</span></p>
+                        </div>
+                     </div>
+                     
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                            <label className="block text-sm font-semibold text-gray-600 mb-3">Goal</label>
@@ -366,7 +461,7 @@
                            </div>
                         </div>
                      </div>
-                     <button onClick={generate} className="w-full mt-6 bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Sparkles size={18} className="text-yellow-400" /> Generate Menu</button>
+                     <button onClick={generate} className="w-full mt-6 bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Sparkles size={18} className="text-yellow-400" /> Refresh Recommendations</button>
                   </div>
                   {plan && (
                      <div className="animate-slide-up">
@@ -455,7 +550,7 @@
                                  </div>
                                </div>
                                <a 
-                                 href={`https://www.walmart.ca/search?q=${encodeURIComponent(item.name)}`} 
+                                 href={`https://www.walmart.com/search?q=${encodeURIComponent(item.name)}`} 
                                  target="_blank" 
                                  rel="noreferrer"
                                  className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
@@ -475,6 +570,9 @@
 
           return (
             <div className="min-h-screen bg-[#F7F7F7] font-sans text-gray-800">
+              {/* Onboarding Modal */}
+              {!userProfile && <OnboardingModal onComplete={setUserProfile} />}
+
               {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
               <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-100">
                 <div className="max-w-6xl mx-auto px-4 pt-4 pb-0">
@@ -554,4 +652,3 @@
     </script>
 </body>
 </html>
-
