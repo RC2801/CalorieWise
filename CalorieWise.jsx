@@ -1,0 +1,1035 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Search, 
+  Plus, 
+  X, 
+  Flame, 
+  ChefHat, 
+  Info, 
+  ArrowRight, 
+  Trash2,
+  Sparkles,
+  Calendar,
+  Target,
+  Leaf,
+  Utensils,
+  BookOpen,
+  Clock,
+  List,
+  ChevronRight
+} from 'lucide-react';
+
+// --- Configuration & Data ---
+
+const THEME = {
+  primary: '#4CAF50',    // Green
+  secondary: '#FFC107',  // Amber
+  bg: '#F7F7F7',         // Light Grey
+  text: '#1F2937',       // Dark Grey
+  cardBg: '#FFFFFF'
+};
+
+// Dietary Flags: 
+// type: 'veg' | 'non-veg' | 'vegan'
+// isJain: boolean (excludes root vegetables like onion, potato, garlic, carrot and eggs/meat)
+const FOOD_DATABASE = [
+  // Fruits
+  { id: 'banana', name: 'Banana', calories: 105, protein: 1.3, carbs: 27, fat: 0.3, icon: '🍌', color: 'bg-yellow-100', type: 'vegan', isJain: true },
+  { id: 'apple', name: 'Apple', calories: 95, protein: 0.5, carbs: 25, fat: 0.3, icon: '🍎', color: 'bg-red-100', type: 'vegan', isJain: true },
+  { id: 'orange', name: 'Orange', calories: 62, protein: 1.2, carbs: 15, fat: 0.2, icon: '🍊', color: 'bg-orange-100', type: 'vegan', isJain: true },
+  { id: 'grapes', name: 'Grapes (1 cup)', calories: 62, protein: 0.6, carbs: 16, fat: 0.3, icon: '🍇', color: 'bg-purple-100', type: 'vegan', isJain: true },
+  { id: 'strawberry', name: 'Strawberry (1 cup)', calories: 49, protein: 1, carbs: 12, fat: 0.5, icon: '🍓', color: 'bg-red-50', type: 'vegan', isJain: true },
+  { id: 'watermelon', name: 'Watermelon (1 slice)', calories: 86, protein: 1.7, carbs: 22, fat: 0.4, icon: '🍉', color: 'bg-green-50', type: 'vegan', isJain: true },
+  { id: 'pineapple', name: 'Pineapple (1 cup)', calories: 82, protein: 0.9, carbs: 22, fat: 0.2, icon: '🍍', color: 'bg-yellow-200', type: 'vegan', isJain: true },
+  { id: 'avocado', name: 'Avocado', calories: 160, protein: 2, carbs: 8.5, fat: 15, icon: '🥑', color: 'bg-green-200', type: 'vegan', isJain: true },
+  { id: 'blueberry', name: 'Blueberries (1 cup)', calories: 85, protein: 1.1, carbs: 21, fat: 0.5, icon: '🫐', color: 'bg-blue-100', type: 'vegan', isJain: true },
+  { id: 'mango', name: 'Mango', calories: 99, protein: 1.4, carbs: 25, fat: 0.6, icon: '🥭', color: 'bg-orange-200', type: 'vegan', isJain: true },
+  { id: 'peach', name: 'Peach', calories: 59, protein: 1.4, carbs: 14, fat: 0.4, icon: '🍑', color: 'bg-orange-50', type: 'vegan', isJain: true },
+
+  // Dairy & Eggs
+  { id: 'milk', name: 'Milk (1 cup)', calories: 122, protein: 8, carbs: 12, fat: 4.8, icon: '🥛', color: 'bg-blue-50', type: 'veg', isJain: true },
+  { id: 'cheese', name: 'Cheese (1 slice)', calories: 113, protein: 7, carbs: 0.4, fat: 9, icon: '🧀', color: 'bg-yellow-100', type: 'veg', isJain: true },
+  { id: 'yogurt', name: 'Yogurt (1 cup)', calories: 150, protein: 8, carbs: 11, fat: 8, icon: '🥣', color: 'bg-blue-100', type: 'veg', isJain: true },
+  { id: 'egg', name: 'Egg (Boiled)', calories: 78, protein: 6, carbs: 0.6, fat: 5, icon: '🥚', color: 'bg-yellow-50', type: 'non-veg', isJain: false },
+  { id: 'butter', name: 'Butter (1 tbsp)', calories: 102, protein: 0.1, carbs: 0, fat: 11.5, icon: '🧈', color: 'bg-yellow-200', type: 'veg', isJain: true },
+  { id: 'cream', name: 'Heavy Cream (1 tbsp)', calories: 50, protein: 0.4, carbs: 0.4, fat: 5.5, icon: '🥛', color: 'bg-gray-50', type: 'veg', isJain: true },
+  { id: 'paneer', name: 'Paneer (100g)', calories: 265, protein: 18, carbs: 1.2, fat: 20, icon: '🧀', color: 'bg-gray-50', type: 'veg', isJain: true },
+
+  // Grains & Carbs
+  { id: 'rice', name: 'Rice (1 bowl)', calories: 206, protein: 4.3, carbs: 45, fat: 0.4, icon: '🍚', color: 'bg-gray-100', type: 'vegan', isJain: true },
+  { id: 'bread', name: 'Bread (2 slices)', calories: 160, protein: 6, carbs: 30, fat: 2, icon: '🍞', color: 'bg-amber-100', type: 'vegan', isJain: true }, 
+  { id: 'pasta', name: 'Pasta (1 cup)', calories: 220, protein: 8, carbs: 43, fat: 1.3, icon: '🍝', color: 'bg-orange-50', type: 'vegan', isJain: true },
+  { id: 'oats', name: 'Oats (1 cup)', calories: 150, protein: 5, carbs: 27, fat: 2.5, icon: '🌾', color: 'bg-amber-50', type: 'vegan', isJain: true },
+  { id: 'cornflakes', name: 'Cornflakes', calories: 100, protein: 2, carbs: 24, fat: 0, icon: '🌽', color: 'bg-yellow-50', type: 'vegan', isJain: true },
+  { id: 'potato', name: 'Potato (Baked)', calories: 161, protein: 4, carbs: 37, fat: 0.2, icon: '🥔', color: 'bg-amber-100', type: 'vegan', isJain: false }, 
+  { id: 'quinoa', name: 'Quinoa (1 cup)', calories: 222, protein: 8, carbs: 39, fat: 3.6, icon: '🥣', color: 'bg-orange-100', type: 'vegan', isJain: true },
+  { id: 'tortilla', name: 'Tortilla (Corn)', calories: 50, protein: 1.4, carbs: 10, fat: 0.7, icon: '🌮', color: 'bg-yellow-100', type: 'vegan', isJain: true },
+  { id: 'pita', name: 'Pita Bread', calories: 165, protein: 5.5, carbs: 33, fat: 1.2, icon: '🫓', color: 'bg-amber-50', type: 'vegan', isJain: true },
+
+  // Proteins
+  { id: 'chicken', name: 'Chicken Breast', calories: 165, protein: 31, carbs: 0, fat: 3.6, icon: '🍗', color: 'bg-orange-50', type: 'non-veg', isJain: false },
+  { id: 'beef', name: 'Beef Steak', calories: 271, protein: 26, carbs: 0, fat: 19, icon: '🥩', color: 'bg-red-200', type: 'non-veg', isJain: false },
+  { id: 'salmon', name: 'Salmon Fillet', calories: 208, protein: 20, carbs: 0, fat: 13, icon: '🐟', color: 'bg-blue-50', type: 'non-veg', isJain: false },
+  { id: 'turkey', name: 'Turkey Slice', calories: 22, protein: 4, carbs: 0, fat: 0.5, icon: '🍖', color: 'bg-pink-100', type: 'non-veg', isJain: false },
+  { id: 'tofu', name: 'Tofu', calories: 94, protein: 10, carbs: 2.3, fat: 5, icon: '🧊', color: 'bg-gray-50', type: 'vegan', isJain: true },
+  { id: 'dal', name: 'Dal (Lentils)', calories: 198, protein: 18, carbs: 53, fat: 0.8, icon: '🍲', color: 'bg-orange-100', type: 'vegan', isJain: true },
+  { id: 'chickpeas', name: 'Chickpeas (1 cup)', calories: 269, protein: 14.5, carbs: 45, fat: 4, icon: '🥣', color: 'bg-yellow-200', type: 'vegan', isJain: true },
+  { id: 'peanut_butter', name: 'Peanut Butter', calories: 188, protein: 8, carbs: 6, fat: 16, icon: '🥜', color: 'bg-amber-200', type: 'vegan', isJain: true },
+  { id: 'tuna', name: 'Tuna (Canned)', calories: 132, protein: 28, carbs: 0, fat: 1, icon: '🐟', color: 'bg-blue-100', type: 'non-veg', isJain: false },
+  { id: 'beans', name: 'Black Beans', calories: 114, protein: 7.6, carbs: 20, fat: 0.5, icon: '🫘', color: 'bg-amber-800 text-white', type: 'vegan', isJain: true },
+
+  // Vegetables
+  { id: 'spinach', name: 'Spinach', calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4, icon: '🥬', color: 'bg-green-100', type: 'vegan', isJain: true },
+  { id: 'kale', name: 'Kale', calories: 33, protein: 3, carbs: 6, fat: 0.6, icon: '🥬', color: 'bg-green-800 text-white', type: 'vegan', isJain: true },
+  { id: 'tomato', name: 'Tomato', calories: 22, protein: 1, carbs: 4.8, fat: 0.2, icon: '🍅', color: 'bg-red-50', type: 'vegan', isJain: true },
+  { id: 'onion', name: 'Onion', calories: 44, protein: 1.1, carbs: 10, fat: 0.1, icon: '🧅', color: 'bg-purple-50', type: 'vegan', isJain: false }, 
+  { id: 'broccoli', name: 'Broccoli', calories: 55, protein: 3.7, carbs: 11, fat: 0.6, icon: '🥦', color: 'bg-green-100', type: 'vegan', isJain: true },
+  { id: 'cucumber', name: 'Cucumber', calories: 16, protein: 0.7, carbs: 3.6, fat: 0.1, icon: '🥒', color: 'bg-green-50', type: 'vegan', isJain: true },
+  { id: 'carrot', name: 'Carrot', calories: 41, protein: 0.9, carbs: 9.6, fat: 0.2, icon: '🥕', color: 'bg-orange-100', type: 'vegan', isJain: false }, 
+  { id: 'lettuce', name: 'Lettuce', calories: 5, protein: 0.5, carbs: 1, fat: 0.1, icon: '🥬', color: 'bg-green-50', type: 'vegan', isJain: true },
+  { id: 'asparagus', name: 'Asparagus', calories: 20, protein: 2.2, carbs: 3.9, fat: 0.1, icon: '🎋', color: 'bg-green-200', type: 'vegan', isJain: true },
+  { id: 'garlic', name: 'Garlic (clove)', calories: 4, protein: 0.2, carbs: 1, fat: 0, icon: '🧄', color: 'bg-gray-100', type: 'vegan', isJain: false }, 
+  { id: 'pepper', name: 'Bell Pepper', calories: 31, protein: 1, carbs: 6, fat: 0.3, icon: '🫑', color: 'bg-red-100', type: 'vegan', isJain: true },
+
+  // Snacks, Beverages & Condiments
+  { id: 'coffee', name: 'Coffee (Black)', calories: 2, protein: 0.3, carbs: 0, fat: 0, icon: '☕', color: 'bg-amber-900 text-white', type: 'vegan', isJain: true },
+  { id: 'tea', name: 'Tea', calories: 1, protein: 0, carbs: 0, fat: 0, icon: '🍵', color: 'bg-green-100', type: 'vegan', isJain: true },
+  { id: 'chocolate', name: 'Chocolate (Bar)', calories: 210, protein: 3, carbs: 26, fat: 13, icon: '🍫', color: 'bg-amber-700 text-white', type: 'veg', isJain: true },
+  { id: 'nuts', name: 'Mixed Nuts (Handful)', calories: 170, protein: 6, carbs: 6, fat: 15, icon: '🥜', color: 'bg-amber-100', type: 'vegan', isJain: true },
+  { id: 'honey', name: 'Honey (1 tbsp)', calories: 64, protein: 0, carbs: 17, fat: 0, icon: '🍯', color: 'bg-yellow-300', type: 'veg', isJain: true }, 
+  { id: 'salsa', name: 'Salsa', calories: 10, protein: 0, carbs: 2, fat: 0, icon: '🍅', color: 'bg-red-200', type: 'vegan', isJain: false }, // Onion/Garlic usually in salsa
+  { id: 'olive_oil', name: 'Olive Oil (1 tbsp)', calories: 119, protein: 0, carbs: 0, fat: 13.5, icon: '🫒', color: 'bg-green-50', type: 'vegan', isJain: true },
+  { id: 'soy_sauce', name: 'Soy Sauce', calories: 9, protein: 1, carbs: 1, fat: 0, icon: '🍶', color: 'bg-gray-800 text-white', type: 'vegan', isJain: true },
+];
+
+const DISH_RULES = [
+  // --- BREAKFAST ---
+  { 
+    name: 'Banana Milkshake', 
+    category: 'Breakfast',
+    ingredients: ['banana', 'milk'], 
+    icon: '🥤', 
+    description: 'Creamy and rich source of potassium.',
+    prepTime: '5 min',
+    recipe: ['Peel the banana and chop into chunks.', 'Add banana and milk to a blender.', 'Blend on high until smooth.', 'Pour into a glass and serve chilled.']
+  },
+  { 
+    name: 'Healthy Breakfast', 
+    category: 'Breakfast',
+    ingredients: ['bread', 'egg', 'milk'], 
+    icon: '🍳', 
+    description: 'A complete start to the day.',
+    prepTime: '15 min',
+    recipe: ['Boil the egg for 7-10 minutes.', 'Toast the bread slices until golden brown.', 'Serve the egg and toast with a warm glass of milk.']
+  },
+  { 
+    name: 'Oatmeal', 
+    category: 'Breakfast',
+    ingredients: ['oats', 'milk', 'banana'], 
+    icon: '🥣', 
+    description: 'Fiber-rich hearty breakfast.',
+    prepTime: '10 min',
+    recipe: ['Boil milk in a saucepan.', 'Add oats and simmer for 5 minutes, stirring occasionally.', 'Slice the banana.', 'Pour oatmeal into a bowl and top with banana slices.']
+  },
+  { 
+    name: 'Avocado Toast', 
+    category: 'Breakfast',
+    ingredients: ['bread', 'avocado'], 
+    icon: '🥑', 
+    description: 'Trendy and healthy fat source.',
+    prepTime: '5 min',
+    recipe: ['Toast the bread until crispy.', 'Mash the avocado with a fork.', 'Spread mashed avocado evenly over toast.', 'Season with salt and pepper (optional).']
+  },
+  { 
+    name: 'Cereal Bowl', 
+    category: 'Breakfast',
+    ingredients: ['cornflakes', 'milk'], 
+    icon: '🥣', 
+    description: 'Quick and easy breakfast.',
+    prepTime: '2 min',
+    recipe: ['Pour cornflakes into a bowl.', 'Add cold or warm milk.', 'Serve immediately to maintain crunch.']
+  },
+  { 
+    name: 'Berry Parfait', 
+    category: 'Breakfast',
+    ingredients: ['yogurt', 'blueberry', 'oats'], 
+    icon: '🍧', 
+    description: 'Antioxidant rich breakfast.',
+    prepTime: '5 min',
+    recipe: ['Add a layer of yogurt to a glass.', 'Add a layer of oats.', 'Top with blueberries.', 'Repeat layers if desired and serve.']
+  },
+  { 
+    name: 'Cheese Omelette', 
+    category: 'Breakfast',
+    ingredients: ['egg', 'cheese'], 
+    icon: '🍳', 
+    description: 'Protein packed breakfast.',
+    prepTime: '10 min',
+    recipe: ['Whisk eggs in a bowl.', 'Pour into a heated, greased pan.', 'When edges set, sprinkle cheese in the middle.', 'Fold the omelette and cook until cheese melts.']
+  },
+  { 
+    name: 'Greek Yogurt Bowl', 
+    category: 'Breakfast',
+    ingredients: ['yogurt', 'nuts', 'honey'], 
+    icon: '🍯', 
+    description: 'Protein packed with healthy fats.',
+    prepTime: '3 min',
+    recipe: ['Scoop yogurt into a bowl.', 'Drizzle honey over the top.', 'Sprinkle mixed nuts for crunch.', 'Serve immediately.']
+  },
+  { 
+    name: 'Green Smoothie', 
+    category: 'Breakfast',
+    ingredients: ['kale', 'apple', 'water'], 
+    icon: '🥬', 
+    description: 'Detoxifying start to the day.',
+    prepTime: '5 min',
+    recipe: ['Wash kale thoroughly.', 'Core and chop the apple.', 'Blend kale, apple, and a cup of water until smooth.']
+  },
+  { 
+    name: 'Mango Lassi', 
+    category: 'Breakfast',
+    ingredients: ['mango', 'yogurt', 'sugar'], 
+    icon: '🥭', 
+    description: 'Sweet and refreshing Indian drink.',
+    prepTime: '5 min',
+    recipe: ['Peel and chop mango.', 'Blend mango, yogurt, and sugar until creamy.', 'Add ice cubes if desired.']
+  },
+
+  // --- LUNCH ---
+  { 
+    name: 'Dal Rice', 
+    category: 'Lunch',
+    ingredients: ['dal', 'rice'], 
+    icon: '🍛', 
+    description: 'Classic comfort food.',
+    prepTime: '30 min',
+    recipe: ['Wash and cook rice until fluffy.', 'Cook dal (lentils) with water until soft.', 'Season dal with spices (tempering).', 'Serve hot dal over rice.']
+  },
+  { 
+    name: 'Chicken Salad', 
+    category: 'Lunch',
+    ingredients: ['chicken', 'lettuce', 'tomato', 'cucumber'], 
+    icon: '🥗', 
+    description: 'Low carb, high protein.',
+    prepTime: '20 min',
+    recipe: ['Grill or boil the chicken breast and slice it.', 'Chop lettuce, tomatoes, and cucumber.', 'Toss all ingredients in a bowl.', 'Add your favorite dressing (optional).']
+  },
+  { 
+    name: 'Peanut Butter Sandwich', 
+    category: 'Lunch',
+    ingredients: ['bread', 'peanut_butter'], 
+    icon: '🥪', 
+    description: 'High energy quick lunch.',
+    prepTime: '2 min',
+    recipe: ['Take two slices of bread.', 'Spread peanut butter generously on one slice.', 'Place the other slice on top.']
+  },
+  { 
+    name: 'Tuna Salad', 
+    category: 'Lunch',
+    ingredients: ['tuna', 'lettuce', 'tomato'], 
+    icon: '🥗', 
+    description: 'Light protein lunch.',
+    prepTime: '10 min',
+    recipe: ['Drain canned tuna.', 'Chop lettuce and tomato.', 'Mix tuna with vegetables.', 'Season with salt, pepper, or lemon juice.']
+  },
+  { 
+    name: 'Burrito Bowl', 
+    category: 'Lunch',
+    ingredients: ['rice', 'beans', 'avocado', 'chicken'], 
+    icon: '🌯', 
+    description: 'Mexican style power bowl.',
+    prepTime: '25 min',
+    recipe: ['Cook rice and heat the beans.', 'Grill chicken and slice.', 'Assemble bowl with rice base, topped with beans and chicken.', 'Garnish with sliced avocado.']
+  },
+  { 
+    name: 'Hummus & Pita', 
+    category: 'Lunch',
+    ingredients: ['chickpeas', 'olive_oil', 'pita'], 
+    icon: '🫓', 
+    description: 'Mediterranean classic.',
+    prepTime: '10 min',
+    recipe: ['Blend chickpeas with olive oil and spices (hummus).', 'Toast pita bread lightly.', 'Serve warm pita with hummus dip.']
+  },
+  { 
+    name: 'Turkey Wrap', 
+    category: 'Lunch',
+    ingredients: ['tortilla', 'turkey', 'lettuce', 'cheese'], 
+    icon: '🌯', 
+    description: 'Lean protein on the go.',
+    prepTime: '5 min',
+    recipe: ['Lay out tortilla.', 'Layer turkey slices, lettuce, and cheese.', 'Roll tightly and cut in half.']
+  },
+  { 
+    name: 'Paneer Salad', 
+    category: 'Lunch',
+    ingredients: ['paneer', 'lettuce', 'tomato', 'pepper'], 
+    icon: '🥗', 
+    description: 'Vegetarian protein salad.',
+    prepTime: '10 min',
+    recipe: ['Cube fresh paneer.', 'Toss with chopped lettuce, tomatoes, and bell peppers.', 'Season with salt and pepper.']
+  },
+
+  // --- DINNER ---
+  { 
+    name: 'Grilled Salmon Meal', 
+    category: 'Dinner',
+    ingredients: ['salmon', 'rice', 'broccoli'], 
+    icon: '🍱', 
+    description: 'Omega-3 rich balanced meal.',
+    prepTime: '25 min',
+    recipe: ['Season salmon fillet and grill until cooked through.', 'Steam broccoli florets.', 'Serve salmon and broccoli alongside cooked rice.']
+  },
+  { 
+    name: 'Pasta with Sauce', 
+    category: 'Dinner',
+    ingredients: ['pasta', 'tomato', 'cheese'], 
+    icon: '🍝', 
+    description: 'Simple Italian style dinner.',
+    prepTime: '20 min',
+    recipe: ['Boil pasta according to package instructions.', 'Cook tomatoes into a sauce or use pasta sauce.', 'Toss pasta with sauce.', 'Garnish with grated cheese.']
+  },
+  { 
+    name: 'Cheeseburger', 
+    category: 'Dinner',
+    ingredients: ['bread', 'beef', 'cheese', 'lettuce', 'tomato'], 
+    icon: '🍔', 
+    description: 'Classic American favorite.',
+    prepTime: '20 min',
+    recipe: ['Form beef into a patty and grill/fry.', 'Place cheese on patty to melt.', 'Toast the bread buns.', 'Assemble burger with lettuce, tomato, and patty.']
+  },
+  { 
+    name: 'Steak & Potato', 
+    category: 'Dinner',
+    ingredients: ['beef', 'potato', 'broccoli'], 
+    icon: '🍽️', 
+    description: 'Hearty protein dinner.',
+    prepTime: '30 min',
+    recipe: ['Season steak and sear/grill to desired doneness.', 'Bake or mash the potato.', 'Steam or roast broccoli.', 'Serve all together on a plate.']
+  },
+  { 
+    name: 'Veggie Stir Fry', 
+    category: 'Dinner',
+    ingredients: ['rice', 'broccoli', 'carrot', 'tofu', 'soy_sauce'], 
+    icon: '🥡', 
+    description: 'Vegan friendly delight.',
+    prepTime: '20 min',
+    recipe: ['Cube tofu and slice vegetables.', 'Stir-fry tofu until golden, remove.', 'Stir-fry veggies in the same pan with soy sauce.', 'Add tofu back and serve with rice.']
+  },
+  { 
+    name: 'Grilled Chicken & Asparagus', 
+    category: 'Dinner',
+    ingredients: ['chicken', 'asparagus', 'potato'], 
+    icon: '🍗', 
+    description: 'Lean and green dinner.',
+    prepTime: '25 min',
+    recipe: ['Season chicken and asparagus.', 'Roast potatoes in the oven.', 'Grill chicken and asparagus until tender.', 'Serve hot.']
+  },
+  { 
+    name: 'Quinoa Bowl', 
+    category: 'Dinner',
+    ingredients: ['quinoa', 'beans', 'avocado', 'spinach'], 
+    icon: '🥣', 
+    description: 'Superfood power bowl.',
+    prepTime: '20 min',
+    recipe: ['Cook quinoa in water/broth.', 'Top with warm black beans.', 'Add fresh spinach and sliced avocado.', 'Drizzle with dressing.']
+  },
+  { 
+    name: 'Tacos', 
+    category: 'Dinner',
+    ingredients: ['tortilla', 'beef', 'cheese', 'salsa', 'lettuce'], 
+    icon: '🌮', 
+    description: 'Fun family dinner.',
+    prepTime: '20 min',
+    recipe: ['Cook ground beef with taco seasoning.', 'Warm the tortillas.', 'Assemble tacos with beef, cheese, lettuce, and salsa.']
+  }
+];
+
+// --- Helper Functions ---
+
+const checkDietaryFit = (itemIds, dietType) => {
+  const items = FOOD_DATABASE.filter(f => itemIds.includes(f.id));
+  
+  for (let item of items) {
+    if (dietType === 'jain' && !item.isJain) return false;
+    if (dietType === 'vegan' && item.type !== 'vegan') return false;
+    if (dietType === 'veg' && item.type === 'non-veg') return false;
+  }
+  return true;
+};
+
+// --- Components ---
+
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg animate-toast-entry ${
+      type === 'success' ? 'bg-green-600 text-white' : 'bg-gray-800 text-white'
+    }`}>
+      {type === 'success' ? <Sparkles size={16} /> : <Info size={16} />}
+      <span className="font-medium text-sm">{message}</span>
+    </div>
+  );
+};
+
+const NutritionPill = ({ label, value, unit, color }) => (
+  <div className={`flex flex-col items-center p-2 rounded-lg ${color} min-w-[60px]`}>
+    <span className="text-xs font-bold text-gray-500 uppercase">{label}</span>
+    <span className="text-sm font-bold text-gray-800">{value}{unit}</span>
+  </div>
+);
+
+// --- Recipe Modal Component ---
+
+const RecipeModal = ({ dish, onClose }) => {
+  if (!dish) return null;
+
+  const ingredients = dish.ingredients.map(id => FOOD_DATABASE.find(f => f.id === id)).filter(Boolean);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
+        
+        {/* Modal Header */}
+        <div className="bg-green-600 p-6 text-white relative shrink-0">
+          <button 
+            onClick={onClose}
+            className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 rounded-full p-2 transition-colors"
+          >
+            <X size={20} />
+          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-4xl">{dish.icon}</span>
+            <div>
+              <h2 className="text-2xl font-bold">{dish.name}</h2>
+              <div className="flex items-center gap-2 text-green-100 text-sm mt-1">
+                <Clock size={14} />
+                <span>{dish.prepTime || '15 min'} Prep</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Body (Scrollable) */}
+        <div className="p-6 overflow-y-auto">
+          
+          {/* Ingredients Section */}
+          <div className="mb-6">
+            <h3 className="flex items-center gap-2 text-lg font-bold text-gray-800 mb-3 border-b pb-2">
+              <Utensils size={18} className="text-orange-500" /> Ingredients
+            </h3>
+            <ul className="space-y-2">
+              {ingredients.map(item => (
+                <li key={item.id} className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg">
+                  <span className="text-2xl">{item.icon}</span>
+                  <div>
+                    <span className="font-medium text-gray-800">{item.name}</span>
+                    <span className="block text-xs text-gray-500">{item.calories} kcal</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Instructions Section */}
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-bold text-gray-800 mb-3 border-b pb-2">
+              <List size={18} className="text-blue-500" /> Instructions
+            </h3>
+            <div className="space-y-4">
+              {dish.recipe && dish.recipe.length > 0 ? (
+                dish.recipe.map((step, index) => (
+                  <div key={index} className="flex gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-bold mt-0.5">
+                      {index + 1}
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed">{step}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400 italic">No instructions available.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-4 bg-gray-50 border-t flex justify-end shrink-0">
+          <button 
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-colors"
+          >
+            Close Recipe
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Sub-View: Diet Planner ---
+
+const DietPlanner = ({ onApplyPlan }) => {
+  const [goal, setGoal] = useState('lose'); // 'lose' | 'gain' | 'maintain'
+  const [diet, setDiet] = useState('veg'); // 'veg' | 'non-veg' | 'vegan' | 'jain'
+  const [generatedPlan, setGeneratedPlan] = useState(null);
+  const [viewingRecipe, setViewingRecipe] = useState(null);
+
+  const generatePlan = () => {
+    // 1. Filter dishes based on Diet
+    const allowedDishes = DISH_RULES.filter(dish => checkDietaryFit(dish.ingredients, diet));
+    
+    // 2. Filter/Sort based on Goal
+    // Calculate total cals for each allowed dish
+    const ratedDishes = allowedDishes.map(dish => {
+      const totalCals = dish.ingredients.reduce((sum, id) => {
+        const item = FOOD_DATABASE.find(f => f.id === id);
+        return sum + (item ? item.calories : 0);
+      }, 0);
+      return { ...dish, totalCals };
+    });
+
+    const sortFn = goal === 'gain' 
+      ? (a, b) => b.totalCals - a.totalCals 
+      : (a, b) => a.totalCals - b.totalCals;
+
+    // Filter by category and take top 3
+    const breakfast = ratedDishes
+      .filter(d => d.category === 'Breakfast')
+      .sort(sortFn)
+      .slice(0, 3);
+
+    const lunch = ratedDishes
+      .filter(d => d.category === 'Lunch')
+      .sort(sortFn)
+      .slice(0, 3);
+
+    const dinner = ratedDishes
+      .filter(d => d.category === 'Dinner')
+      .sort(sortFn)
+      .slice(0, 3);
+
+    setGeneratedPlan({ breakfast, lunch, dinner });
+  };
+
+  const MealCard = ({ dish, color }) => {
+    return (
+      <div className={`p-5 min-w-[280px] w-[280px] md:w-full rounded-xl border border-transparent shadow-sm hover:shadow-md transition-all bg-white relative overflow-hidden group shrink-0`}>
+        <div className={`absolute top-0 left-0 w-1 h-full ${color}`}></div>
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h4 className="font-bold text-lg text-gray-800 mt-1 group-hover:text-green-600 transition-colors">{dish.name}</h4>
+          </div>
+          <span className="text-2xl group-hover:scale-110 transition-transform">{dish.icon}</span>
+        </div>
+        <p className="text-sm text-gray-500 mb-3 line-clamp-2 h-10">{dish.description}</p>
+        <div className="flex items-center justify-between mt-4">
+           <span className="text-sm font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded-md">{dish.totalCals} kcal</span>
+           <div className="flex gap-2">
+             <button 
+               onClick={() => setViewingRecipe(dish)}
+               className="text-xs font-semibold text-gray-500 hover:text-green-600 flex items-center gap-1 px-2 py-1 hover:bg-green-50 rounded-md transition-colors"
+             >
+               <BookOpen size={12} /> Recipe
+             </button>
+             <button 
+               onClick={() => onApplyPlan(dish.ingredients)}
+               className="text-xs font-semibold text-green-600 hover:underline flex items-center gap-1"
+             >
+               Add <ArrowRight size={12} />
+             </button>
+           </div>
+        </div>
+      </div>
+    );
+  };
+
+  const MealSection = ({ title, dishes, color }) => (
+    <div className="mb-8">
+      <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+        {title} <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{dishes.length} options</span>
+      </h3>
+      
+      {dishes.length > 0 ? (
+        <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto md:overflow-visible pb-4 md:pb-0 px-1">
+          {dishes.map((dish, idx) => (
+            <MealCard key={idx} dish={dish} color={color} />
+          ))}
+        </div>
+      ) : (
+        <div className="p-6 rounded-xl border-2 border-dashed border-gray-200 text-center text-gray-400 bg-gray-50">
+          No suitable {title.toLowerCase()} found for these filters.
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-8 animate-content-fade-in relative">
+      {/* Configuration Form */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+           <Target className="text-green-500" /> Plan Your Diet
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Goal Selector */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-600 mb-3">Your Goal</label>
+            <div className="flex gap-2">
+              {[
+                { id: 'lose', label: 'Lose Weight', icon: <ArrowRight className="rotate-45" size={16} /> },
+                { id: 'gain', label: 'Gain Weight', icon: <ArrowRight className="-rotate-45" size={16} /> },
+                { id: 'maintain', label: 'Maintain', icon: <ArrowRight size={16} /> }
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setGoal(opt.id)}
+                  className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
+                    goal === opt.id 
+                      ? 'bg-green-50 border-green-500 text-green-700 shadow-sm ring-1 ring-green-500' 
+                      : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`mb-1 ${goal === opt.id ? 'text-green-600' : 'text-gray-400'}`}>{opt.icon}</span>
+                  <span className="text-sm font-bold">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Diet Selector */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-600 mb-3">Dietary Preference</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'veg', label: 'Vegetarian' },
+                { id: 'non-veg', label: 'Non-Veg' },
+                { id: 'vegan', label: 'Vegan' },
+                { id: 'jain', label: 'Jain' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setDiet(opt.id)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    diet === opt.id 
+                      ? 'bg-amber-50 border-amber-500 text-amber-800' 
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button 
+          onClick={generatePlan}
+          className="w-full mt-8 bg-gray-900 text-white py-4 rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
+        >
+          <Sparkles size={20} className="text-yellow-400" /> Generate Daily Routine
+        </button>
+      </div>
+
+      {/* Results Section */}
+      {generatedPlan && (
+        <div className="animate-slide-up pb-12">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <Calendar className="text-green-600" /> Recommended Menu
+          </h2>
+          
+          <MealSection title="Breakfast Options" dishes={generatedPlan.breakfast} color="bg-orange-400" />
+          <MealSection title="Lunch Options" dishes={generatedPlan.lunch} color="bg-green-500" />
+          <MealSection title="Dinner Options" dishes={generatedPlan.dinner} color="bg-blue-500" />
+
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex gap-3 items-start mt-8">
+             <Info size={20} className="text-blue-500 shrink-0 mt-0.5" />
+             <p className="text-sm text-blue-800">
+               <strong>Tip:</strong> You can mix and match! Selecting "Add" puts the ingredients into your calculator to tweak portions.
+             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Recipe Modal Overlay */}
+      {viewingRecipe && (
+        <RecipeModal dish={viewingRecipe} onClose={() => setViewingRecipe(null)} />
+      )}
+    </div>
+  );
+};
+
+
+export default function CalorieWise() {
+  const [activeTab, setActiveTab] = useState('calculator'); // 'calculator' | 'planner'
+  
+  // Calculator State
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestedDish, setSuggestedDish] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
+
+  // -- Logic --
+
+  const filteredFood = useMemo(() => {
+    return FOOD_DATABASE.filter(item => 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
+
+  const totalNutrition = useMemo(() => {
+    return selectedItems.reduce((acc, item) => ({
+      calories: acc.calories + item.calories,
+      protein: acc.protein + item.protein,
+      carbs: acc.carbs + item.carbs,
+      fat: acc.fat + item.fat,
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  }, [selectedItems]);
+
+  // Check for Dish Matches
+  useEffect(() => {
+    const selectedIds = selectedItems.map(i => i.id);
+    let foundDish = null;
+
+    const matches = DISH_RULES.filter(dish => 
+      dish.ingredients.every(ingId => selectedIds.includes(ingId))
+    );
+
+    if (matches.length > 0) {
+      foundDish = matches.sort((a, b) => b.ingredients.length - a.ingredients.length)[0];
+    }
+
+    if (foundDish && (!suggestedDish || suggestedDish.name !== foundDish.name)) {
+      setSuggestedDish(foundDish);
+      setToast({ message: `New Dish: ${foundDish.name}!`, type: 'success' });
+    } else if (!foundDish && suggestedDish) {
+      setSuggestedDish(null);
+    }
+  }, [selectedItems, suggestedDish]);
+
+  const handleAddItem = (item) => {
+    if (selectedItems.find(i => i.id === item.id)) {
+      setToast({ message: 'Item already added!', type: 'info' });
+      return;
+    }
+    setSelectedItems([...selectedItems, item]);
+    setToast({ message: `${item.name} added`, type: 'info' });
+  };
+
+  // Used by DietPlanner to add a whole meal
+  const handleAddMeal = (ingredientIds) => {
+    const newItems = ingredientIds
+      .map(id => FOOD_DATABASE.find(f => f.id === id))
+      .filter(item => item && !selectedItems.find(si => si.id === item.id));
+    
+    if (newItems.length > 0) {
+      setSelectedItems([...selectedItems, ...newItems]);
+      setToast({ message: 'Meal ingredients added!', type: 'success' });
+      setActiveTab('calculator'); // Switch back to see result
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setToast({ message: 'Ingredients already in list', type: 'info' });
+    }
+  };
+
+  const handleRemoveItem = (itemId) => {
+    setSelectedItems(selectedItems.filter(i => i.id !== itemId));
+  };
+
+  const resetAll = () => {
+    setSelectedItems([]);
+    setSuggestedDish(null);
+    setSearchQuery('');
+  };
+
+  // -- Render Helpers --
+
+  const getDishIngredients = () => {
+    if (!suggestedDish) return [];
+    return selectedItems.filter(item => suggestedDish.ingredients.includes(item.id));
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F7F7F7] font-sans text-gray-800 pb-32 md:pb-0">
+      {/* Toast Notification */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Header with Navigation */}
+      <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 pt-4 pb-0">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-green-500 p-2 rounded-lg text-white">
+                <ChefHat size={24} />
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-gray-900">CalorieWise</h1>
+            </div>
+            {activeTab === 'calculator' && selectedItems.length > 0 && (
+              <button 
+                onClick={resetAll}
+                className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1 transition-colors"
+              >
+                <Trash2 size={16} /> <span className="hidden sm:inline">Clear All</span>
+              </button>
+            )}
+          </div>
+          
+          {/* Tabs */}
+          <div className="flex gap-6 border-b border-gray-100">
+            <button 
+              onClick={() => setActiveTab('calculator')}
+              className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${
+                activeTab === 'calculator' 
+                  ? 'border-green-500 text-green-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Utensils size={18} /> Calculator
+            </button>
+            <button 
+              onClick={() => setActiveTab('planner')}
+              className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${
+                activeTab === 'planner' 
+                  ? 'border-green-500 text-green-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Calendar size={18} /> Diet Planner
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        
+        {/* VIEW: CALCULATOR */}
+        {activeTab === 'calculator' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-content-fade-in">
+            {/* LEFT COLUMN: Selection & Search (7 cols) */}
+            <section className="lg:col-span-7 space-y-6">
+              
+              {/* Search Bar */}
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <Search size={20} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search foods (e.g., Banana, Rice)..."
+                  className="block w-full pl-10 pr-3 py-4 border-none rounded-xl bg-white shadow-sm ring-1 ring-gray-200 focus:ring-2 focus:ring-green-500 transition-all outline-none text-lg"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* Categories / Grid */}
+              <div>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Available Foods</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {filteredFood.map(item => {
+                    const isSelected = selectedItems.find(i => i.id === item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleAddItem(item)}
+                        disabled={isSelected}
+                        className={`relative overflow-hidden group flex flex-col items-center p-4 rounded-2xl transition-all duration-300 ${
+                          isSelected 
+                            ? 'bg-gray-100 opacity-60 cursor-default ring-1 ring-gray-200' 
+                            : 'bg-white hover:shadow-md hover:-translate-y-1 ring-1 ring-gray-100'
+                        }`}
+                      >
+                        <div className={`text-4xl mb-3 p-3 rounded-full ${item.color} group-hover:scale-110 transition-transform`}>
+                          {item.icon}
+                        </div>
+                        <h3 className="font-semibold text-gray-800">{item.name}</h3>
+                        <p className="text-sm text-green-600 font-medium">{item.calories} kcal</p>
+                        
+                        {/* Tags */}
+                        <div className="flex gap-1 mt-2">
+                           {item.type === 'vegan' && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Vegan</span>}
+                           {item.isJain && <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">Jain</span>}
+                        </div>
+                        
+                        {!isSelected && (
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-green-500 text-white p-1 rounded-full">
+                              <Plus size={16} />
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {filteredFood.length === 0 && (
+                    <div className="col-span-full py-10 text-center text-gray-400">
+                      No foods found matching "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* RIGHT COLUMN: The Plate / Logic (5 cols) */}
+            <section className="lg:col-span-5 space-y-6">
+              
+              {/* Selected Items (Horizontal Scroll on Mobile, Stacked on Desktop) */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  <span>Selected Ingredients</span>
+                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">{selectedItems.length}</span>
+                </h2>
+
+                {selectedItems.length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                    <span className="text-gray-400 text-sm">Your plate is empty.<br/>Select items to begin.</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedItems.map(item => (
+                      <div key={item.id} className="animate-pop-in flex items-center gap-2 bg-gray-50 border border-gray-200 pl-3 pr-2 py-2 rounded-full">
+                        <span>{item.icon}</span>
+                        <span className="text-sm font-medium">{item.name}</span>
+                        <button 
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-100 hover:text-red-500 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* DISH SUGGESTION CARD */}
+              {suggestedDish && (
+                <div className="animate-slide-up bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-6 border border-yellow-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <ChefHat size={120} className="text-yellow-600" />
+                  </div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-2 text-yellow-700 font-semibold text-xs uppercase tracking-wider">
+                      <Sparkles size={14} />
+                      <span>Dish Match Found!</span>
+                    </div>
+                    
+                    <h3 className="text-2xl font-bold text-gray-900 mb-1">{suggestedDish.name}</h3>
+                    <p className="text-sm text-gray-600 mb-4">{suggestedDish.description}</p>
+                    
+                    <div className="flex items-center gap-4 bg-white/60 p-3 rounded-xl backdrop-blur-sm">
+                      <span className="text-4xl">{suggestedDish.icon}</span>
+                      <div>
+                        <div className="text-sm text-gray-500">Combined Calories</div>
+                        <div className="text-xl font-bold text-green-700">
+                          {getDishIngredients().reduce((sum, item) => sum + item.calories, 0)} kcal
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex -space-x-2 overflow-hidden">
+                      {getDishIngredients().map(item => (
+                         <div key={item.id} className={`inline-block h-8 w-8 rounded-full ring-2 ring-white flex items-center justify-center ${item.color} text-sm`} title={item.name}>
+                            {item.icon}
+                         </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Breakdown Panel (Desktop) */}
+              <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-lg font-bold mb-4">Nutritional Breakdown</h2>
+                <div className="grid grid-cols-3 gap-2">
+                  <NutritionPill label="Protein" value={totalNutrition.protein.toFixed(1)} unit="g" color="bg-blue-50" />
+                  <NutritionPill label="Carbs" value={totalNutrition.carbs.toFixed(1)} unit="g" color="bg-green-50" />
+                  <NutritionPill label="Fats" value={totalNutrition.fat.toFixed(1)} unit="g" color="bg-yellow-50" />
+                </div>
+                
+                <div className="mt-6 pt-6 border-t border-gray-100 flex justify-between items-end">
+                  <div className="text-gray-500 text-sm font-medium">Total Energy</div>
+                  <div className="text-right">
+                     <div className="text-3xl font-bold text-green-600 flex items-center gap-1">
+                       {totalNutrition.calories.toFixed(0)} <span className="text-lg text-gray-400 font-normal">kcal</span>
+                     </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* VIEW: DIET PLANNER */}
+        {activeTab === 'planner' && (
+          <DietPlanner onApplyPlan={handleAddMeal} />
+        )}
+
+      </main>
+
+      {/* MOBILE STICKY FOOTER (Only for Calculator) */}
+      {activeTab === 'calculator' && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4 pb-6 z-50">
+          <div className="flex justify-between items-center max-w-lg mx-auto">
+            <div 
+              className="flex flex-col" 
+              onClick={() => setIsMobileSummaryOpen(!isMobileSummaryOpen)}
+            >
+               <span className="text-xs font-semibold text-gray-400 uppercase">Total Calories</span>
+               <div className="flex items-center gap-2">
+                 <span className="text-2xl font-bold text-green-600">{totalNutrition.calories.toFixed(0)}</span>
+                 <Flame size={18} className="text-orange-500 fill-orange-500" />
+               </div>
+            </div>
+            
+            <button 
+              className="bg-gray-900 text-white px-6 py-3 rounded-xl font-semibold shadow-lg active:scale-95 transition-transform flex items-center gap-2"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              Add More
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes pop-in {
+          0% { transform: scale(0.8); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes toast-entry {
+          0% { transform: translate(-50%, -20px); opacity: 0; }
+          100% { transform: translate(-50%, 0); opacity: 1; }
+        }
+        @keyframes content-fade-in {
+          0% { transform: translateY(-10px); opacity: 0; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slide-up {
+          0% { transform: translateY(20px); opacity: 0; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes scale-up {
+          0% { transform: scale(0.9); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        .animate-pop-in { animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-toast-entry { animation: toast-entry 0.4s ease-out forwards; }
+        .animate-content-fade-in { animation: content-fade-in 0.4s ease-out forwards; }
+        .animate-slide-up { animation: slide-up 0.5s ease-out forwards; }
+        .animate-scale-up { animation: scale-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
+      `}</style>
+    </div>
+  );
+}
